@@ -41,11 +41,11 @@ const LoginScreen = () => {
   
         // Step 3: Navigate based on role
         if (role === 'admin') {
-          router.push('/AdminHome');
+          router.push('/admin/AdminHome');
         } else if (role === 'teacher') {
-          router.push('/TeacherHome');
+          router.push('/teacher/TeacherHome');
         } else if (role === 'student') {
-          router.push('/StudentHome');
+          router.push('/student/StudentHome');
         } else {
           Alert.alert("Login Failed", "Unknown role.");
         }
@@ -53,9 +53,9 @@ const LoginScreen = () => {
         Alert.alert("Login Failed", "User data not found.");
       }
   
-    } catch (error: any) {
-      console.log("Login failed:", error.message);
-      Alert.alert("Login Failed", error.message);
+    }catch (error: any) {
+      console.log("Login failed:", error.code);
+      Alert.alert("Login Failed", "Invalid email or password.");
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +80,7 @@ const LoginScreen = () => {
           secureTextEntry={!showPassword}
           style={styles.passwordInput}
           value={password}
+          autoCapitalize="none"
           onChangeText={setPassword}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
