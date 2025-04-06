@@ -21,45 +21,50 @@ const LoginScreen = () => {
       Alert.alert("Missing Fields", "Please fill in both email and password.");
       return;
     }
-
+  
     setIsLoading(true);
     try {
       // Step 1: Sign in the user
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log("Login successful:", user.email);
+      // console.log("Login successful:", user.email);
   
       // Step 2: Fetch user role from Firestore
-      const userDocRef = doc(db, 'users', user.uid); // assumes uid is used as doc ID and this will fetch that
+      const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
   
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData.role;
-  
-        console.log('User role:', role);
-  
-        // Step 3: Navigate based on role
-        if (role === 'admin') {
-          router.push('/admin/AdminHome');
-        } else if (role === 'teacher') {
-          router.push('/teacher/TeacherHome');
-        } else if (role === 'student') {
-          router.push('/student/StudentHome');
-        } else {
-          Alert.alert("Login Failed", "Unknown role.");
-        }
-      } else {
-        Alert.alert("Login Failed", "User data not found.");
+      if (!userDoc.exists()) { 
+        // User was deleted from Firestore — force logout
+        Alert.alert("Access Denied", "Your account has been removed by admin.");
+        console.log("Access Denied", "Your account has been removed by admin.");
+        await auth.signOut();
+        return;
       }
   
-    }catch (error: any) {
+      const userData = userDoc.data();
+      const role = userData.role;
+  
+      console.log('User role:', role);
+  
+      // Step 3: Navigate based on role
+      if (role === 'admin') {
+        router.replace('/admin/AdminHome');
+      } else if (role === 'teacher') {
+        router.replace('/teacher/TeacherHome');
+      } else if (role === 'student') {
+        router.replace('/student/StudentHome');
+      } else {
+        Alert.alert("Login Failed", "Unknown role.");
+      }
+  
+    } catch (error: any) {
       console.log("Login failed:", error.code);
       Alert.alert("Login Failed", "Invalid email or password.");
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <View style={styles.container}>
