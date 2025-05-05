@@ -1,0 +1,6 @@
+1. I will create a admin role and then the admin can
+Create a teacher and a user with there details stored in the database and after creating the user/teacher the id and password will be generated automatically and will be saved to the collection of the user/teacher only and id, pass will be sent on the email of the following user/teacher
+
+2. Teacher will receive email and they can see their profile on top and then beneath the profile they can see the timetable of that day and classes from first class to last and when they will tap on a class it will open and then they will get list of the students of that class and then they will mark attendance 
+
+3.User will receive email of id, password when they will login they can see their profile with details and they will see timetable of today beneath it and it will shoe them classes from one to last and just besides the class there will be small mark of A/P/Not marked they will indicate their attendance of that class

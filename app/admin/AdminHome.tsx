@@ -54,7 +54,7 @@ const AdminHomeScreen = () => {
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true } //means the user can also dismiss the dialog by tapping outside it (on Android).
     );
   };
   
@@ -95,56 +95,90 @@ const AdminHomeScreen = () => {
 
 export default AdminHomeScreen;
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f2f2f2', // Soft background
     padding: 24,
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 24,
-    marginBottom: 30,
+    fontSize: 26,
+    marginBottom: 32,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: '#333',
   },
   button: {
-    backgroundColor: '#007bff',
-    padding: 14,
-    borderRadius: 8,
+    backgroundColor: '#4A90E2', // Brighter blue
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    elevation: 4, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   updateButton: {
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 16,
     backgroundColor: '#28a745',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   deleteButton: {
-    padding: 14,
-    borderRadius: 8,
+    backgroundColor: '#ff4d4d',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 16,
-    backgroundColor: '#dc3545',
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
   logoutButton: {
     position: 'absolute',
     bottom: 40,
     left: 24,
     right: 24,
-    padding: 14,
-    backgroundColor: '#6c757d', // Gray
-    borderRadius: 8,
+    paddingVertical: 16,
+    backgroundColor: '#6c757d',
+    borderRadius: 16,
     alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   logoutText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
 });
+
+
+
+
+
