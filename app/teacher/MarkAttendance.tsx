@@ -29,8 +29,26 @@ type Student = {
 type AttendanceStatus = "Present" | "Absent" | "Not marked";
 
 const MarkAttendance = () => {
-  const { classId } = useLocalSearchParams();
+  const { classId, subject, startTime, endTime } = useLocalSearchParams();
   const router = useRouter();
+
+  // Basic validation of params
+  if (
+    !classId ||
+    typeof classId !== "string" ||
+    !subject ||
+    typeof subject !== "string" ||
+    !startTime ||
+    typeof startTime !== "string" ||
+    !endTime ||
+    typeof endTime !== "string"
+  ) {
+    Alert.alert(
+      "Missing parameters",
+      "Class, subject, start time or end time not provided. Please go back and try again."
+    );
+    return null;
+  }
 
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<
@@ -38,18 +56,17 @@ const MarkAttendance = () => {
   >({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadedSubject, setLoadedSubject] = useState<string | null>(null);
 
   const todayStr = new Date().toISOString().split("T")[0]; // yyyy-mm-dd
 
   useEffect(() => {
-    if (!classId || typeof classId !== "string") return;
-
     const fetchStudentsAndAttendance = async () => {
       setLoading(true);
       try {
         const normalizedClassId = classId.toLowerCase();
 
-        // 🔧 Query students from users where 'class' == normalizedClassId
+        // Query students in class
         const q = query(
           collection(db, "users"),
           where("class", "==", normalizedClassId)
@@ -64,23 +81,35 @@ const MarkAttendance = () => {
 
         setStudents(fetchedStudents);
 
+        // Normalize subject and time slot for doc id
+        const normalizedSubject = subject.toLowerCase().replace(/\s+/g, "_");
+        const normalizedTimeSlot = `${startTime}-${endTime}`.replace(/:/g, "-");
+
+        // Attendance doc id now includes subject and time slot
         const attendanceDocRef = doc(
           db,
           "attendance",
-          `${normalizedClassId}_${todayStr}`
+          `${normalizedClassId}_${todayStr}_${normalizedSubject}_${normalizedTimeSlot}`
         );
+
         const attendanceDocSnap = await getDoc(attendanceDocRef);
 
         let initialAttendance: Record<string, AttendanceStatus> = {};
+        let savedSubject: string | null = null;
+
         if (attendanceDocSnap.exists()) {
-          initialAttendance = attendanceDocSnap.data().attendance;
+          const data = attendanceDocSnap.data();
+          initialAttendance = data.attendance || {};
+          savedSubject = data.subject || null;
         } else {
           fetchedStudents.forEach((s) => {
             initialAttendance[s.id] = "Not marked";
           });
+          savedSubject = subject; // Use passed subject param
         }
 
         setAttendance(initialAttendance);
+        setLoadedSubject(savedSubject);
       } catch (err) {
         console.error("Error fetching data:", err);
         Alert.alert("Error", "Failed to load students or attendance.");
@@ -90,7 +119,7 @@ const MarkAttendance = () => {
     };
 
     fetchStudentsAndAttendance();
-  }, [classId]);
+  }, [classId, subject, startTime, endTime, todayStr]);
 
   const setStudentAttendance = (
     studentId: string,
@@ -108,6 +137,11 @@ const MarkAttendance = () => {
       return;
     }
 
+    if (!loadedSubject) {
+      Alert.alert("Missing Subject", "Please provide a subject before saving.");
+      return;
+    }
+
     Alert.alert("Confirm Save", "Save attendance?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -115,17 +149,28 @@ const MarkAttendance = () => {
         onPress: async () => {
           setSaving(true);
           try {
-            const normalizedClassId =
-              typeof classId === "string" ? classId.toLowerCase() : classId;
+            const normalizedClassId = classId.toLowerCase();
+            const normalizedSubject = subject
+              .toLowerCase()
+              .replace(/\s+/g, "_");
+            const normalizedTimeSlot = `${startTime}-${endTime}`.replace(
+              /:/g,
+              "-"
+            );
+
             const attendanceDocRef = doc(
               db,
               "attendance",
-              `${normalizedClassId}_${todayStr}`
+              `${normalizedClassId}_${todayStr}_${normalizedSubject}_${normalizedTimeSlot}`
             );
+
             await setDoc(attendanceDocRef, {
               classId: normalizedClassId,
               date: todayStr,
               attendance,
+              subject: loadedSubject,
+              startTime,
+              endTime,
             });
             Alert.alert("Success", "Attendance saved.");
             router.back();
@@ -153,7 +198,11 @@ const MarkAttendance = () => {
     <View style={styles.container}>
       <Text style={styles.heading}>
         Mark Attendance for{" "}
-        {typeof classId === "string" ? classId.toUpperCase() : ""} on {todayStr}
+        {typeof classId === "string" ? classId.toUpperCase() : ""}
+        {" - "}
+        {typeof loadedSubject === "string" ? loadedSubject.toUpperCase() : ""}
+        {" on "}
+        {todayStr} ({startTime ?? ""} - {endTime ?? ""})
       </Text>
 
       <FlatList
@@ -219,6 +268,7 @@ const styles = StyleSheet.create({
   },
   studentName: { fontSize: 18, flex: 1 },
   buttonsRow: { flexDirection: "row", gap: 8 },
+
   statusButton: {
     width: 36,
     height: 36,
@@ -232,14 +282,22 @@ const styles = StyleSheet.create({
   selectedButton: { borderWidth: 2, borderColor: "#007bff" },
   presentButton: { backgroundColor: "#d4edda" },
   absentButton: { backgroundColor: "#f8d7da" },
-  notMarkedButton: { backgroundColor: "#e2e3e5" },
-  statusButtonText: { fontWeight: "bold", color: "#333" },
+  notMarkedButton: { backgroundColor: "#fff3cd" },
+  statusButtonText: {
+    fontWeight: "bold",
+    color: "#000",
+  },
+
   saveButton: {
+    marginTop: 20,
+    padding: 12,
     backgroundColor: "#007bff",
-    paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 20,
   },
-  saveButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });

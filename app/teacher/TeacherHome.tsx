@@ -14,7 +14,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
-import styles from "./TeacherHomeScreen.styles.tsx"; // You can style similar to admin screen
+import styles from "./TeacherHomeScreen.styles.tsx";
 
 const TeacherHomeScreen = () => {
   const [classesToday, setClassesToday] = useState<any[]>([]);
@@ -61,7 +61,12 @@ const TeacherHomeScreen = () => {
   const handleClassPress = (classItem: any) => {
     router.push({
       pathname: "/teacher/MarkAttendance",
-      params: { classId: classItem.className },
+      params: {
+        classId: classItem.className,
+        subject: classItem.subject,
+        startTime: classItem.startTime,
+        endTime: classItem.endTime,
+      },
     });
   };
 
