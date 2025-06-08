@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { auth, db } from '../../firebaseConfig.js';
-import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { auth, db } from "../../firebaseConfig.js";
+import { signOut } from "firebase/auth";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
-import styles from './TeacherHomeScreen.styles.tsx'; // You can style similar to admin screen
+import styles from "./TeacherHomeScreen.styles.tsx"; // You can style similar to admin screen
 
 const TeacherHomeScreen = () => {
   const [classesToday, setClassesToday] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [teacherName, setTeacherName] = useState('');
+  const [teacherName, setTeacherName] = useState("");
   const router = useRouter();
 
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -31,16 +31,25 @@ const TeacherHomeScreen = () => {
         const uid = auth.currentUser?.uid;
         if (!uid) return;
 
-        const usersSnap = await getDocs(query(collection(db, 'users'), where('uid', '==', uid)));
+        const usersSnap = await getDocs(
+          query(collection(db, "users"), where("uid", "==", uid))
+        );
         const teacherDoc = usersSnap.docs[0];
-        setTeacherName(teacherDoc?.data().name || '');
+        setTeacherName(teacherDoc?.data().name || "");
 
-        const q = query(collection(db, 'timetable'), where('teacherId', '==', uid), where('day', '==', today));
+        const q = query(
+          collection(db, "timetable"),
+          where("teacherId", "==", uid),
+          where("day", "==", today)
+        );
         const snapshot = await getDocs(q);
-        const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const results = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setClassesToday(results);
       } catch (error) {
-        console.error('Error fetching timetable:', error);
+        console.error("Error fetching timetable:", error);
       } finally {
         setLoading(false);
       }
@@ -51,28 +60,26 @@ const TeacherHomeScreen = () => {
 
   const handleClassPress = (classItem: any) => {
     router.push({
-      pathname: '/teacher/MarkAttendance',
-      params: { classId: classItem.id }
+      pathname: "/teacher/MarkAttendance",
+      params: { classId: classItem.className },
     });
   };
-  
-  
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout Confirmation',
-      'Are you sure you want to logout?',
+      "Logout Confirmation",
+      "Are you sure you want to logout?",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Logout',
-          style: 'destructive',
+          text: "Logout",
+          style: "destructive",
           onPress: async () => {
             try {
               await signOut(auth);
-              router.replace('/');
+              router.replace("/");
             } catch (error) {
-              Alert.alert('Error', 'Logout failed');
+              Alert.alert("Error", "Logout failed");
             }
           },
         },
@@ -82,11 +89,17 @@ const TeacherHomeScreen = () => {
   };
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 50 }} />;
+    return (
+      <ActivityIndicator
+        size="large"
+        color="#007bff"
+        style={{ marginTop: 50 }}
+      />
+    );
   }
 
   return (
-    <LinearGradient colors={['#f1f9ff', '#ffffff']} style={styles.container}>
+    <LinearGradient colors={["#f1f9ff", "#ffffff"]} style={styles.container}>
       <View style={styles.profileSection}>
         <Text style={styles.heading}>Welcome, {teacherName}</Text>
         <Text style={styles.subheading}>Your classes for {today}</Text>
@@ -97,12 +110,17 @@ const TeacherHomeScreen = () => {
       ) : (
         <FlatList
           data={classesToday}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => handleClassPress(item)}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => handleClassPress(item)}
+            >
               <Text style={styles.classText}>{item.className}</Text>
               <Text>{item.subject}</Text>
-              <Text>{item.startTime} - {item.endTime}</Text>
+              <Text>
+                {item.startTime} - {item.endTime}
+              </Text>
             </TouchableOpacity>
           )}
         />
