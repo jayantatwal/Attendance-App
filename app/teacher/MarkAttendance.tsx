@@ -32,7 +32,6 @@ const MarkAttendance = () => {
   const { classId, subject, startTime, endTime } = useLocalSearchParams();
   const router = useRouter();
 
-  // Basic validation of params
   if (
     !classId ||
     typeof classId !== "string" ||
@@ -66,7 +65,6 @@ const MarkAttendance = () => {
       try {
         const normalizedClassId = classId.toLowerCase();
 
-        // Query students in class
         const q = query(
           collection(db, "users"),
           where("class", "==", normalizedClassId)
@@ -81,11 +79,9 @@ const MarkAttendance = () => {
 
         setStudents(fetchedStudents);
 
-        // Normalize subject and time slot for doc id
         const normalizedSubject = subject.toLowerCase().replace(/\s+/g, "_");
         const normalizedTimeSlot = `${startTime}-${endTime}`.replace(/:/g, "-");
 
-        // Attendance doc id now includes subject and time slot
         const attendanceDocRef = doc(
           db,
           "attendance",
@@ -105,7 +101,7 @@ const MarkAttendance = () => {
           fetchedStudents.forEach((s) => {
             initialAttendance[s.id] = "Not marked";
           });
-          savedSubject = subject; // Use passed subject param
+          savedSubject = subject;
         }
 
         setAttendance(initialAttendance);
@@ -126,6 +122,44 @@ const MarkAttendance = () => {
     status: AttendanceStatus
   ) => {
     setAttendance((prev) => ({ ...prev, [studentId]: status }));
+  };
+
+  const updateTotalAttendance = async (
+    studentId: string,
+    status: AttendanceStatus
+  ) => {
+    try {
+      const q = query(
+        collection(db, "totalAttendance"),
+        where("uid", "==", studentId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const docRef = snapshot.docs[0].ref;
+        const data = snapshot.docs[0].data();
+
+        let updatedData = {
+          total: (data.total || 0) + 1,
+          present: data.present || 0,
+          absent: data.absent || 0,
+        };
+
+        if (status === "Present") updatedData.present += 1;
+        else if (status === "Absent") updatedData.absent += 1;
+
+        await setDoc(docRef, { ...data, ...updatedData }, { merge: true });
+      } else {
+        await setDoc(doc(collection(db, "totalAttendance")), {
+          uid: studentId,
+          total: 1,
+          present: status === "Present" ? 1 : 0,
+          absent: status === "Absent" ? 1 : 0,
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to update totalAttendance for ${studentId}:`, err);
+    }
   };
 
   const saveAttendance = () => {
@@ -172,6 +206,16 @@ const MarkAttendance = () => {
               startTime,
               endTime,
             });
+
+            for (const [studentId, status] of Object.entries(attendance)) {
+              if (status === "Present" || status === "Absent") {
+                await updateTotalAttendance(
+                  studentId,
+                  status as AttendanceStatus
+                );
+              }
+            }
+
             Alert.alert("Success", "Attendance saved.");
             router.back();
           } catch (error) {

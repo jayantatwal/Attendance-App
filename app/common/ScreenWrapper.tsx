@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, ViewStyle, StyleSheet } from "react-native";
+import { View, ViewStyle, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 type ScreenWrapperProps = {
@@ -15,13 +15,7 @@ const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
 }) => {
   return (
     <LinearGradient colors={gradientColors} style={styles.gradient}>
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, style]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      <View style={[styles.content, style]}>{children}</View>
     </LinearGradient>
   );
 };
@@ -30,7 +24,8 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  scrollContent: {
+  content: {
+    flex: 1,
     padding: 16,
     paddingBottom: 80, // ensures bottom elements are tappable
   },
