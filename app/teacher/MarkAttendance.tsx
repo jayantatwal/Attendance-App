@@ -20,6 +20,8 @@ import {
   getDoc,
 } from "firebase/firestore";
 
+const todayStr = new Date().toISOString().split("T")[0];
+
 type Student = {
   id: string;
   name: string;
@@ -56,8 +58,6 @@ const MarkAttendance = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadedSubject, setLoadedSubject] = useState<string | null>(null);
-
-  const todayStr = new Date().toISOString().split("T")[0]; // yyyy-mm-dd
 
   useEffect(() => {
     const fetchStudentsAndAttendance = async () => {
@@ -115,7 +115,7 @@ const MarkAttendance = () => {
     };
 
     fetchStudentsAndAttendance();
-  }, [classId, subject, startTime, endTime, todayStr]);
+  }, [classId, subject, startTime, endTime]);
 
   const setStudentAttendance = (
     studentId: string,
@@ -126,7 +126,8 @@ const MarkAttendance = () => {
 
   const updateTotalAttendance = async (
     studentId: string,
-    status: AttendanceStatus
+    newStatus: AttendanceStatus,
+    previousStatus: AttendanceStatus
   ) => {
     try {
       const q = query(
@@ -140,21 +141,28 @@ const MarkAttendance = () => {
         const data = snapshot.docs[0].data();
 
         let updatedData = {
-          total: (data.total || 0) + 1,
+          total: data.total || 0,
           present: data.present || 0,
           absent: data.absent || 0,
         };
 
-        if (status === "Present") updatedData.present += 1;
-        else if (status === "Absent") updatedData.absent += 1;
+        if (previousStatus === "Not marked") {
+          updatedData.total += 1;
+        }
 
-        await setDoc(docRef, { ...data, ...updatedData }, { merge: true });
+        if (previousStatus === "Present") updatedData.present -= 1;
+        if (previousStatus === "Absent") updatedData.absent -= 1;
+
+        if (newStatus === "Present") updatedData.present += 1;
+        if (newStatus === "Absent") updatedData.absent += 1;
+
+        await setDoc(docRef, updatedData, { merge: true });
       } else {
         await setDoc(doc(collection(db, "totalAttendance")), {
           uid: studentId,
           total: 1,
-          present: status === "Present" ? 1 : 0,
-          absent: status === "Absent" ? 1 : 0,
+          present: newStatus === "Present" ? 1 : 0,
+          absent: newStatus === "Absent" ? 1 : 0,
         });
       }
     } catch (err) {
@@ -162,7 +170,7 @@ const MarkAttendance = () => {
     }
   };
 
-  const saveAttendance = () => {
+  const saveAttendance = async () => {
     const notMarkedStudents = students.filter(
       (s) => attendance[s.id] === "Not marked"
     );
@@ -192,11 +200,14 @@ const MarkAttendance = () => {
               "-"
             );
 
-            const attendanceDocRef = doc(
-              db,
-              "attendance",
-              `${normalizedClassId}_${todayStr}_${normalizedSubject}_${normalizedTimeSlot}`
-            );
+            const docId = `${normalizedClassId}_${todayStr}_${normalizedSubject}_${normalizedTimeSlot}`;
+            const attendanceDocRef = doc(db, "attendance", docId);
+            const attendanceDocSnap = await getDoc(attendanceDocRef);
+
+            const previousAttendance =
+              attendanceDocSnap.exists() && attendanceDocSnap.data()?.attendance
+                ? attendanceDocSnap.data().attendance
+                : {};
 
             await setDoc(attendanceDocRef, {
               classId: normalizedClassId,
@@ -207,11 +218,21 @@ const MarkAttendance = () => {
               endTime,
             });
 
-            for (const [studentId, status] of Object.entries(attendance)) {
-              if (status === "Present" || status === "Absent") {
+            for (const [studentId, newStatus] of Object.entries(attendance)) {
+              const prevStatus =
+                (previousAttendance[studentId] as AttendanceStatus) ||
+                "Not marked";
+
+              if (
+                (prevStatus !== newStatus &&
+                  (newStatus === "Present" || newStatus === "Absent")) ||
+                (!previousAttendance[studentId] &&
+                  (newStatus === "Present" || newStatus === "Absent"))
+              ) {
                 await updateTotalAttendance(
                   studentId,
-                  status as AttendanceStatus
+                  newStatus as AttendanceStatus,
+                  prevStatus
                 );
               }
             }
@@ -241,12 +262,8 @@ const MarkAttendance = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>
-        Mark Attendance for{" "}
-        {typeof classId === "string" ? classId.toUpperCase() : ""}
-        {" - "}
-        {typeof loadedSubject === "string" ? loadedSubject.toUpperCase() : ""}
-        {" on "}
-        {todayStr} ({startTime ?? ""} - {endTime ?? ""})
+        Mark Attendance for {classId.toUpperCase()} -{" "}
+        {loadedSubject?.toUpperCase()} on {todayStr} ({startTime} - {endTime})
       </Text>
 
       <FlatList
@@ -254,7 +271,7 @@ const MarkAttendance = () => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.studentRow}>
-            <Text style={styles.studentName}>{item.name}</Text>
+            <Text style={styles.studentName}>{item.name.toUpperCase()}</Text>
             <View style={styles.buttonsRow}>
               {(["Present", "Absent", "Not marked"] as AttendanceStatus[]).map(
                 (status) => (
@@ -312,7 +329,6 @@ const styles = StyleSheet.create({
   },
   studentName: { fontSize: 18, flex: 1 },
   buttonsRow: { flexDirection: "row", gap: 8 },
-
   statusButton: {
     width: 36,
     height: 36,
@@ -331,7 +347,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
   },
-
   saveButton: {
     marginTop: 20,
     padding: 12,

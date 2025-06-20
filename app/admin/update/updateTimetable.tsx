@@ -102,10 +102,11 @@ const EditTimetableScreen = () => {
     try {
       const ref = doc(db, "timetable", editingClass.id);
       await updateDoc(ref, {
-        subject,
+        subject: subject.toLowerCase(), // ✅ Ensure consistency
         startTime,
         endTime,
         teacherId: selectedTeacherId,
+        className: editingClass.className.toLowerCase(), // ✅ Store in lowercase
       });
       Alert.alert("Success", "Class updated.");
       setEditModalVisible(false);

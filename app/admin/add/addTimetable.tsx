@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,29 +7,38 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-} from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import { collection, getDocs, addDoc, query, where } from "firebase/firestore";
+import { db } from "../../../firebaseConfig.js";
 
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig.js';
-
-const classesList = ['MCA Morning', 'MCA Evening', 'MSc Computer Science'];
-const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const classesList = ["MCA Morning", "MCA Evening", "MSc Computer Science"];
+const daysList = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 const AddTimetable = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
-  const [selectedDay, setSelectedDay] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [selectedDay, setSelectedDay] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   useEffect(() => {
     const fetchTeachers = async () => {
-      const q = query(collection(db, 'users'), where('role', '==', 'teacher'));
+      const q = query(collection(db, "users"), where("role", "==", "teacher"));
       const snapshot = await getDocs(q);
-      const fetchedTeachers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const fetchedTeachers = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
       setTeachers(fetchedTeachers);
     };
 
@@ -37,7 +46,7 @@ const AddTimetable = () => {
   }, []);
 
   useEffect(() => {
-    setSelectedSubject('');
+    setSelectedSubject("");
   }, [selectedTeacher]);
 
   const handleSubmit = async () => {
@@ -49,59 +58,64 @@ const AddTimetable = () => {
       !startTime ||
       !endTime
     ) {
-      Alert.alert('Error', 'Please fill all fields');
+      Alert.alert("Error", "Please fill all fields");
       return;
     }
 
     try {
-      await addDoc(collection(db, 'timetable'), {
+      await addDoc(collection(db, "timetable"), {
         teacherId: selectedTeacher.id,
         teacherName: selectedTeacher.name,
         day: selectedDay,
-        className: selectedClass,
-        subject: selectedSubject,
+        className: selectedClass.toLowerCase(), // ✅ Convert class name to lowercase
+        subject: selectedSubject.toLowerCase(), // ✅ Convert subject to lowercase for consistency
         startTime,
         endTime,
         createdAt: new Date(),
       });
 
-      Alert.alert('Success', 'Timetable entry added successfully');
+      Alert.alert("Success", "Timetable entry added successfully");
       setSelectedTeacher(null);
-      setSelectedDay('');
-      setSelectedClass('');
-      setSelectedSubject('');
-      setStartTime('');
-      setEndTime('');
+      setSelectedDay("");
+      setSelectedClass("");
+      setSelectedSubject("");
+      setStartTime("");
+      setEndTime("");
     } catch (error) {
-      Alert.alert('Error', 'Failed to add timetable');
+      Alert.alert("Error", "Failed to add timetable");
       console.error(error);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.heading}>Add Timetable</Text>
 
-      {/* Teacher Picker */}
       <Text style={styles.label}>Select Teacher</Text>
       <View style={styles.pickerWrapper}>
         <Picker
           style={styles.picker}
-          selectedValue={selectedTeacher?.id || ''}
+          selectedValue={selectedTeacher?.id || ""}
           onValueChange={(itemValue) => {
-            const teacher = teachers.find(t => t.id === itemValue);
+            const teacher = teachers.find((t) => t.id === itemValue);
             setSelectedTeacher(teacher || null);
           }}
           dropdownIconColor="#007bff"
         >
           <Picker.Item label="-- Select Teacher --" value="" />
-          {teachers.map(teacher => (
-            <Picker.Item key={teacher.id} label={teacher.name} value={teacher.id} />
+          {teachers.map((teacher) => (
+            <Picker.Item
+              key={teacher.id}
+              label={teacher.name}
+              value={teacher.id}
+            />
           ))}
         </Picker>
       </View>
 
-      {/* Day Picker */}
       <Text style={styles.label}>Select Day</Text>
       <View style={styles.pickerWrapper}>
         <Picker
@@ -111,13 +125,12 @@ const AddTimetable = () => {
           dropdownIconColor="#007bff"
         >
           <Picker.Item label="-- Select Day --" value="" />
-          {daysList.map(day => (
+          {daysList.map((day) => (
             <Picker.Item key={day} label={day} value={day} />
           ))}
         </Picker>
       </View>
 
-      {/* Class Picker */}
       <Text style={styles.label}>Select Class</Text>
       <View style={styles.pickerWrapper}>
         <Picker
@@ -127,15 +140,19 @@ const AddTimetable = () => {
           dropdownIconColor="#007bff"
         >
           <Picker.Item label="-- Select Class --" value="" />
-          {classesList.map(cls => (
+          {classesList.map((cls) => (
             <Picker.Item key={cls} label={cls} value={cls} />
           ))}
         </Picker>
       </View>
 
-      {/* Subject Picker */}
       <Text style={styles.label}>Select Subject</Text>
-      <View style={[styles.pickerWrapper, !selectedTeacher && styles.disabledPicker]}>
+      <View
+        style={[
+          styles.pickerWrapper,
+          !selectedTeacher && styles.disabledPicker,
+        ]}
+      >
         <Picker
           style={styles.picker}
           selectedValue={selectedSubject}
@@ -144,7 +161,11 @@ const AddTimetable = () => {
           dropdownIconColor={selectedTeacher ? "#007bff" : "#aaa"}
         >
           <Picker.Item
-            label={selectedTeacher ? '-- Select Subject --' : 'Select a teacher first'}
+            label={
+              selectedTeacher
+                ? "-- Select Subject --"
+                : "Select a teacher first"
+            }
             value=""
           />
           {selectedTeacher?.subjects?.map((sub: string, index: number) => (
@@ -153,7 +174,6 @@ const AddTimetable = () => {
         </Picker>
       </View>
 
-      {/* Start Time Input */}
       <Text style={styles.label}>Start Time</Text>
       <TextInput
         value={startTime}
@@ -163,7 +183,6 @@ const AddTimetable = () => {
         keyboardType="default"
       />
 
-      {/* End Time Input */}
       <Text style={styles.label}>End Time</Text>
       <TextInput
         value={endTime}
@@ -173,8 +192,11 @@ const AddTimetable = () => {
         keyboardType="default"
       />
 
-      {/* Submit Button */}
-      <TouchableOpacity onPress={handleSubmit} style={styles.button} activeOpacity={0.85}>
+      <TouchableOpacity
+        onPress={handleSubmit}
+        style={styles.button}
+        activeOpacity={0.85}
+      >
         <Text style={styles.buttonText}>Add Timetable</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -187,54 +209,54 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   heading: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
   },
   label: {
     fontSize: 16,
     marginBottom: 4,
-    fontWeight: '500',
-    color: '#000',
+    fontWeight: "500",
+    color: "#000",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 16,
-    backgroundColor: '#fff',
-    color: '#000',
+    backgroundColor: "#fff",
+    color: "#000",
   },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     marginBottom: 16,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
+    overflow: "hidden",
+    backgroundColor: "#fff",
   },
   picker: {
-    color: '#000',
+    color: "#000",
   },
   disabledPicker: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
   },
   button: {
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

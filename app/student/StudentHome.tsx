@@ -19,7 +19,6 @@ import {
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import ScreenWrapper from "../common/ScreenWrapper.tsx";
-import { onSnapshot } from "firebase/firestore"; // at the top
 
 type TimetableItem = {
   id: string;
@@ -30,9 +29,16 @@ type TimetableItem = {
   endTime: string;
 };
 
+type UserInfo = {
+  name: string;
+  class: string;
+  rollNumber: string;
+};
+
 const StudentHomeScreen = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
   const [attendedCount, setAttendedCount] = useState<number>(0);
   const [todayClassesCount, setTodayClassesCount] = useState<number>(0);
@@ -44,9 +50,11 @@ const StudentHomeScreen = () => {
     const fetchData = async () => {
       try {
         const uid = auth.currentUser?.uid;
-        if (!uid) return;
+        if (!uid) {
+          console.error("No user logged in");
+          return;
+        }
 
-        // Fetch user using UID as document ID
         const userRef = doc(db, "users", uid);
         const userSnap = await getDoc(userRef);
 
@@ -55,14 +63,16 @@ const StudentHomeScreen = () => {
           return;
         }
 
-        const user = userSnap.data();
-        const studentClass = user.class;
+        const user = userSnap.data() as UserInfo;
+        setUserInfo(user);
+
+        const studentClass = (user.class || "").toLowerCase();
 
         const today = new Date().toLocaleDateString("en-US", {
           weekday: "long",
         });
 
-        // Fetch today's timetable
+        // Get timetable
         const ttSnap = await getDocs(
           query(
             collection(db, "timetable"),
@@ -77,7 +87,7 @@ const StudentHomeScreen = () => {
         }));
         setTimetable(classes);
 
-        // Fetch total attendance
+        // Total attendance
         const totalAttSnap = await getDocs(
           query(collection(db, "totalAttendance"), where("uid", "==", uid))
         );
@@ -88,25 +98,28 @@ const StudentHomeScreen = () => {
           setTodayClassesCount(att.total || 0);
         }
 
-        // Fetch today's attendance status for each class
+        // Class-wise status
         const statusMap: Record<string, "Present" | "Absent" | "N"> = {};
 
         for (const cls of classes) {
+          const dateStr = new Date().toISOString().split("T")[0];
+
           const attSnap = await getDocs(
             query(
               collection(db, "attendance"),
-              where("classId", "==", cls.className.toLowerCase()),
-              where("date", "==", new Date().toISOString().split("T")[0])
+              where("classId", "==", studentClass),
+              where("date", "==", dateStr)
             )
           );
+
           const doc = attSnap.docs[0];
-          const attendance = doc?.data()?.attendance ?? {};
+          const attendance = doc?.data()?.attendance || {};
           statusMap[cls.id] = attendance[uid] || "N";
         }
 
         setAttendanceStatusMap(statusMap);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (err) {
+        console.error("Failed to fetch student data:", err);
       } finally {
         setLoading(false);
       }
@@ -118,7 +131,7 @@ const StudentHomeScreen = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.replace("/"); // adjust if your login screen is at another path
+      router.replace("/");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -140,6 +153,20 @@ const StudentHomeScreen = () => {
 
   return (
     <ScreenWrapper gradientColors={["#f0f4f7", "#fff"]}>
+      {userInfo && (
+        <View style={styles.studentInfo}>
+          <Text style={styles.studentInfoText}>
+            Name: {userInfo.name.toUpperCase()}
+          </Text>
+          <Text style={styles.studentInfoText}>
+            Class: {userInfo.class.toUpperCase()}
+          </Text>
+          <Text style={styles.studentInfoText}>
+            Roll Number: {userInfo.rollNumber}
+          </Text>
+        </View>
+      )}
+
       {/* Attendance Overview */}
       <View style={styles.overview}>
         <Text style={styles.overviewText}>Attended: {attendedCount}</Text>
@@ -191,7 +218,6 @@ const StudentHomeScreen = () => {
         }}
       />
 
-      {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
@@ -202,6 +228,18 @@ const StudentHomeScreen = () => {
 export default StudentHomeScreen;
 
 const styles = StyleSheet.create({
+  studentInfo: {
+    padding: 12,
+    backgroundColor: "#ddeeff",
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  studentInfoText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    marginVertical: 2,
+  },
   overview: {
     marginBottom: 20,
     padding: 12,
